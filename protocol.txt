@@ -1,0 +1,62 @@
+protocol 
+
+fixed header ( 2 bytes ): [ message type (4) | DUP flag(1) | QoS level(2) | retain(1) | remaining length(8 * 4)] 
+
+message type :
+	+ 0 reseved
+	+ 1 CONNECT
+	+ 2 CONNACK
+	+ 3 PUBLISH 
+	+ 4 PUBACK
+	+ 5 PUBREC
+	+ 6 PUBREL
+	+ 7 PUBCOMP
+	+ 8 SUBSCRIBE
+	+ 9 SUBACK
+	+ 10 PINGREQ
+	+ 11 PINGRESP
+	+ 12 DISCONNECT
+ 
+DUP flag : duplicate delivery // not use
+QoS : quality of service : 
+	+ 0 at most once 
+	+ 1 at least once
+	+ 2 exactly once
+	+ 3 reserved
+retain : retain flag // not use 
+1. connect: 
+	[fixed header | connect flags | keep alive timer (2 bytes)| payload]
+	fixed header : [ 1 << 4| 0 << 3| 0 << 1| 0 | remaining length(8 * 4) ] 
+	connect flags (1 byte) : user name flag(1) | password flag(1) | will retain(1) | will QoS(2) | will flag(1) | clean session(1) | (empty)
+	payload : clientid ( 23 byte) (| will topic | user name(12bytes) | password(12bytes))
+2. connack:
+	[fixed header | return code(1 byte)]
+	fixed header :[2  | 0 | 0 | 0 | remaininig length(8 * 4)]
+	return code: 0x0 connection accecpt 
+		     0x1 connection refused : unacceptable 
+		     0x2 connection refused : identifier rejected
+	  	     0x3 connection refused : server unavailable
+		     0x4 connection refused : bad user name or password
+		     0x5 connection refused : not authorized
+3 publish:
+	[fixed header | topic name | message id(2 bytes) | payload]
+	fixed header : [3 | 0 | 1 | 0| remaining length]
+	topic name : [ length ( 2 bytes ) | topic name ]
+	payload : contains data for publishing . ( remaining length - 2 - length - 2 bytes)
+4 respond of publish ( PUBACK , PUBREC->PUBREL->PUBCOMP):
+	[fixed header | message id ( 2 bytes)]
+	fixed header : [x | 0 | 0 | 0 | 2]
+	x depends on the QoS level : 
+		0  NONE
+		1  PUBACK
+		2  PUBREC
+5 subscribe:
+	[fixed header | message id(2 bytes) (| topic name | QoS level(1 bytes) ) * ]
+	fixed header : [8 | 0 | 0 | 1 | remaining length ]
+	topic name : [ length ( 2 bytes ) | topic name ] "/location/service"
+6 suback 
+	[fixed header | message id (2 bytes)(| payload)*]
+	fixed header : [9 | 0 | 0 | 0 | remaining length ]
+	payload( 1 bytes ) : granted QoS 
+
+

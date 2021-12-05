@@ -116,6 +116,10 @@ public class PacketMessage {
         return payload;
     }
 
+    public static String makeTopic(String location, String sensor){
+        return '/' + location + '/' + sensor;
+    }
+
     /** connect pkt sent to broker
      * */
     public static int makeConnect(byte[] pkt, String clientID){
@@ -180,10 +184,10 @@ public class PacketMessage {
     }
     /** subscribe pkt sent to server
      * */
-    public static int makeSubscribe(byte[] pkt , int messageID, String[] topics){
+    public static int makeSubscribe(byte[] pkt , int messageID, String[] topics, int len){
         int idx = FIXED_HEADER_SIZE;
         idx = setMessageId(pkt, idx, messageID);
-        for( int i = 0; i < topics.length; i++)
+        for( int i = 0; i < len; i++)
             idx = setTopic(pkt, idx, topics[i]);
         setFixedHeader(pkt, 8, 0, 0, 1, idx - FIXED_HEADER_SIZE);
         return idx;

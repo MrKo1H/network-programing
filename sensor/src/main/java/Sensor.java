@@ -24,6 +24,12 @@ public class Sensor {
         this.brokerPort = 1608;
     }
 
+    public Sensor(String sensorName){
+        this.brokerAddress = "localhost";
+        this.brokerPort = 1608;
+        this.sensorName = sensorName;
+    }
+
     public String getSensorName() {
         return sensorName;
     }
@@ -31,7 +37,7 @@ public class Sensor {
     private void setRemainingLength(byte[] pkt, int remainingLength){
         for( int i = 0, idx = 1; i < REMAINING_LENGTH_SIZE; i++){
             pkt[idx++] = (byte)(remainingLength & 0xff);
-            remainingLength >>= 4;
+            remainingLength >>= 8;
         }
     }
     private void setFixedHeader(byte[] pkt, int msgType, int dupFlag, int qosLevel, int retain,int remainingLength){
@@ -143,7 +149,9 @@ public class Sensor {
     }
 
     public static void main(String[] argv){
-        Sensor sensor = new Sensor();
+        String sensorName;
+        sensorName = (argv.length == 1) ? argv[0] : "sensorA";
+        Sensor sensor = new Sensor(sensorName);
         sensor.start();
     }
 }

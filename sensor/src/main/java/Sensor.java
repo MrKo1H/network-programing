@@ -105,16 +105,16 @@ public class Sensor {
 
     private int getMessageID(byte[] pkt, int idx){
         int msgID = 0;
-        for( int i = idx + MESSAGE_ID_SIZE - 1; i >= idx; i++)
+        for( int i = idx + MESSAGE_ID_SIZE - 1; i >= idx; i--)
             msgID = msgID << 4 + pkt[i];
         return msgID;
     }
 
     public void start(){
         try{
-            //this.connFd = new Socket(this.brokerAddress, this.brokerPort);
-            //this.in = connFd.getInputStream();
-            //this.out = connFd.getOutputStream();
+            this.connFd = new Socket(this.brokerAddress, this.brokerPort);
+            this.in = connFd.getInputStream();
+            this.out = connFd.getOutputStream();
 
             byte[] sentBuff = new byte[BUFFER_SIZE];
             byte[] recvBuff = new byte[BUFFER_SIZE];

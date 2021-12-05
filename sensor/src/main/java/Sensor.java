@@ -86,8 +86,8 @@ public class Sensor {
     /// /location/sensor/payload
     private int makePublish(byte[] pkt, String location, String payload){
         int idx = FIXED_HEADER_SIZE;
-        idx = setTopic(pkt, idx, location);
         idx = setMessageID(pkt, idx);
+        idx = setTopic(pkt, idx, location);
         idx = setPayload(pkt, idx, payload);
         setFixedHeader(pkt, 3, 0, 1, 0, idx - FIXED_HEADER_SIZE);
         return idx;
@@ -106,9 +106,9 @@ public class Sensor {
 
     public void start(){
         try{
-            this.connFd = new Socket(this.brokerAddress, this.brokerPort);
-            this.in = connFd.getInputStream();
-            this.out = connFd.getOutputStream();
+            //this.connFd = new Socket(this.brokerAddress, this.brokerPort);
+            //this.in = connFd.getInputStream();
+            //this.out = connFd.getOutputStream();
 
             byte[] sentBuff = new byte[BUFFER_SIZE];
             byte[] recvBuff = new byte[BUFFER_SIZE];
@@ -124,7 +124,7 @@ public class Sensor {
 
                 System.out.print("location: ");
                 location = scanner.nextLine();
-                System.out.println("payload: ");
+                System.out.print("payload: ");
                 payload = scanner.nextLine();
                 n_write = makePublish(sentBuff, location, payload);
                 out.write(sentBuff, 0, n_write);

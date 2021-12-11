@@ -106,7 +106,7 @@ public class Sensor {
     private int getMessageID(byte[] pkt, int idx){
         int msgID = 0;
         for( int i = idx + MESSAGE_ID_SIZE - 1; i >= idx; i--)
-            msgID = msgID << 4 + pkt[i];
+            msgID = msgID << 8 | pkt[i];
         return msgID;
     }
 
@@ -150,7 +150,7 @@ public class Sensor {
 
     public static void main(String[] argv){
         String sensorName;
-        sensorName = (argv.length == 1) ? argv[0] : "sensorA";
+        sensorName = (argv.length == 1) ? argv[0] : "aaaa";
         Sensor sensor = new Sensor(sensorName);
         sensor.start();
     }

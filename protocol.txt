@@ -39,7 +39,7 @@ retain : retain flag // not use
 		     0x4 connection refused : bad user name or password
 		     0x5 connection refused : not authorized
 3 publish:
-	[fixed header | topic name | message id(2 bytes) | payload]
+	[fixed header | message id(2 bytes) |topic name | payload]
 	fixed header : [3 | 0 | 1 | 0| remaining length]
 	topic name : [ length ( 2 bytes ) | topic name ]
 	payload : contains data for publishing . ( remaining length - 2 - length - 2 bytes)
@@ -51,7 +51,7 @@ retain : retain flag // not use
 		1  PUBACK
 		2  PUBREC
 5 subscribe:
-	[fixed header | message id(2 bytes) (| topic name | QoS level(1 bytes) ) * ]
+	[fixed header | message id(2 bytes) | clientid(23 byte) (| topic name) * ]
 	fixed header : [8 | 0 | 0 | 1 | remaining length ]
 	topic name : [ length ( 2 bytes ) | topic name ] "/location/service"
 6 suback 

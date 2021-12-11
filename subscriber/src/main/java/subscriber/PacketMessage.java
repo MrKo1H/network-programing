@@ -14,7 +14,7 @@ public class PacketMessage {
 
     public static void setRemainingLength(byte[] pkt, int length){
         for( int i = 0, idx = 1; i < REMAINING_LENGTH_SIZE; i++){
-            pkt[i] = (byte) (length & 0xff);
+            pkt[idx++] = (byte) (length & 0xff);
             length >>= 8;
         }
     }
@@ -41,7 +41,7 @@ public class PacketMessage {
     public static int getRemainingLength(byte[] pkt){
         int idx = REMAINING_LENGTH_SIZE, length = 0;
         for(int i = REMAINING_LENGTH_SIZE;i > 0;  i--)
-            length = length << 8 + pkt[idx--];
+            length = length << 8 | pkt[idx--];
         return length;
     }
 
@@ -66,7 +66,7 @@ public class PacketMessage {
     public static int getMessageId(byte[] pkt, int idx){
         int msgId = 0;
         for(int i = idx + MESSAGE_ID_SIZE - 1; i >= idx; i--)
-            msgId = msgId << 8 + pkt[i];
+            msgId = msgId << 8 | pkt[i];
         return msgId;
     }
 
@@ -81,7 +81,7 @@ public class PacketMessage {
     public static int getTopicLength(byte[] pkt, int idx){
         int len = 0;
         for( int i = idx + TOPIC_NAME_LENGTH_SIZE - 1; i >= idx; i--)
-            len = len << 8 + pkt[i];
+            len = len << 8 | pkt[i];
         return len;
     }
     public static int setTopicName(byte[] pkt, int idx, String topicName){
@@ -105,7 +105,7 @@ public class PacketMessage {
     public static int getPayloadLength(byte[] pkt, int idx){
         int len = 0;
         for(int i = idx + PAYLOAD_LENGTH_SIZE - 1; i >= idx; i--)
-            len = len << 8 + pkt[i];
+            len = len << 8 | pkt[i];
         return len;
     }
 
@@ -125,6 +125,7 @@ public class PacketMessage {
     public static int makeConnect(byte[] pkt, String clientID){
         int idx = FIXED_HEADER_SIZE;
         idx = setConnectFlag(pkt, idx, 0,0,0,0,0,0);
+        idx = setClientID(pkt, idx, clientID);
         setFixedHeader(pkt, 1, 0, 0, 0, idx - FIXED_HEADER_SIZE);
         return idx;
     }
@@ -184,9 +185,10 @@ public class PacketMessage {
     }
     /** subscribe pkt sent to server
      * */
-    public static int makeSubscribe(byte[] pkt , int messageID, String[] topics, int len){
+    public static int makeSubscribe(byte[] pkt , int messageID,String clientID, String[] topics, int len){
         int idx = FIXED_HEADER_SIZE;
         idx = setMessageId(pkt, idx, messageID);
+        idx = setClientID(pkt, idx, clientID);
         for( int i = 0; i < len; i++)
             idx = setTopic(pkt, idx, topics[i]);
         setFixedHeader(pkt, 8, 0, 0, 1, idx - FIXED_HEADER_SIZE);

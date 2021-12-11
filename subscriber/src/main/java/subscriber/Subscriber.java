@@ -58,11 +58,11 @@ public class Subscriber {
             System.out.println("Connectd to server :" + this.connFdSub);
             
             InputStream in = connFdSub.getInputStream();
-            OutputStream out  = connFdListen.getOutputStream();
+            OutputStream out  = connFdSub.getOutputStream();
             byte[] buff = new byte[BUFFER_SIZE];
             int bytes;
 
-            bytes = PacketMessage.makeSubscribe(buff,getMessageID(),topics, len);
+            bytes = PacketMessage.makeSubscribe(buff,getMessageID(),getClientID(), topics, len);
             out.write(buff, 0, bytes);
             incMessageID();
 
@@ -82,7 +82,8 @@ public class Subscriber {
     public void start(){
         try{
             this.connFdListen = new Socket(getServerAddress(), getServerPort());
-            Thread listenThread= new ListenThread(connFdListen);
+            ListenThread listenThread= new ListenThread(connFdListen);
+            listenThread.start();
             System.out.println("Connected to server " + connFdListen);
 
             while(true){
@@ -133,13 +134,13 @@ public class Subscriber {
                 byte[] sentBuff = new byte[BUFFER_SIZE];
 
                 int n_read = 0, n_write = 0;
+                System.out.println("Listen publish at " + connFd);
 
                 // sent connect pkt to server
-                System.out.println("Sent CONNECT");
                 n_write = PacketMessage.makeConnect(sentBuff,getClientID());
                 out.write(sentBuff, 0, n_write);
 
-                System.out.println("Listen publish at " + connFd);
+                System.out.println("Sent CONNECT");
 
                 while(true){
                     if( (n_read = in.read(recvBuff, 0, recvBuff.length)) != -1){
@@ -157,9 +158,9 @@ public class Subscriber {
                             case 3: // publish
                                 String[] msg = PacketMessage.recvPublish(recvBuff, n_read);
                                 System.out.println("Received PUBLISH");
-                                System.out.println("MessageID :" + msg[0]);
+                                System.out.println("MessageID:" + msg[0]);
                                 System.out.println("Topic name:" + msg[1]);
-                                System.out.println("Payload   :" + msg[2]);
+                                System.out.println("Payload:" + msg[2]);
 
                                 n_write = PacketMessage.makePuback(sentBuff, getMessageID());
                                 incMessageID();

@@ -282,6 +282,11 @@ int makePuback(char *pkt, int msgID){
 	return idx;	
 }
 
+int recvPuback(char *pkt){
+	int idx = FIXED_HEADER_SIZE;
+	return get_msg_type(pkt[0]);
+}
+
 int makePubrec(char *pkt, int msgID){
 	int idx = FIXED_HEADER_SIZE;
 	idx = setMsgID(pkt, idx, msgID);
@@ -296,6 +301,14 @@ int makePubrel(char *pkt, int msgID){
 	return idx;
 }
 
+
+int checkSubscribe(struct sub *usr, struct pub * pub_pkt){
+	for(int i = 0; i < usr->s_cnt; i++)
+		if( !strcmp(pub_pkt->p_top->t_loc, usr->s_top[i]->t_loc) && 
+			!strcmp(pub_pkt->p_top->t_ser, usr->s_top[i]->t_ser))
+			return 0; /// subscribed to topic
+	return 1;// none 
+}
 
 void recvSubscribe(char *pkt, struct sub *a, int len){	
 	char *id;
@@ -397,5 +410,9 @@ int passiveTCP(){
 		if ( (n = pthread_cond_signal(cptr)) != 0) \
 			{ errno = n; perror("pthread_cond_signal error"); } \
 	}
-
+#define	Pthread_cond_broadcast(cptr) \
+	{	int  n; \
+		if ( (n = pthread_cond_broadcast(cptr)) != 0) \
+			{ errno = n; perror("pthread_cond_signal error"); } \
+	}
 #endif

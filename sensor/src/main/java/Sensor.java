@@ -111,21 +111,21 @@ public class Sensor {
     }
 
     public void start(){
-        try{
-            this.connFd = new Socket(this.brokerAddress, this.brokerPort);
-            this.in = connFd.getInputStream();
-            this.out = connFd.getOutputStream();
+        while(true){
+            try{
+                this.connFd = new Socket(this.brokerAddress, this.brokerPort);
+                this.in = connFd.getInputStream();
+                this.out = connFd.getOutputStream();
 
-            byte[] sentBuff = new byte[BUFFER_SIZE];
-            byte[] recvBuff = new byte[BUFFER_SIZE];
-            int n_read, n_write;
-            System.out.println("Connected to server " + connFd);
+                byte[] sentBuff = new byte[BUFFER_SIZE];
+                byte[] recvBuff = new byte[BUFFER_SIZE];
+                int n_read, n_write;
+                System.out.println("Connected to server " + connFd);
 
-            /** make publish msg sent to broker
-                for test
-            */
-            Scanner scanner = new Scanner(System.in);
-            while(true){
+                /** make publish msg sent to broker
+                 for test
+                 */
+                Scanner scanner = new Scanner(System.in);
                 String location, payload;
 
                 System.out.print("location: ");
@@ -137,14 +137,14 @@ public class Sensor {
 
                 if( (n_read = in.read(recvBuff)) != -1){
                     messageID = getMessageID(recvBuff, FIXED_HEADER_SIZE);
-                };
-            }
-        } catch(SocketException ex){
+                }
+            } catch(SocketException ex){
 
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

@@ -47,9 +47,10 @@ retain : retain flag // not use
 	[fixed header | message id ( 2 bytes)]
 	fixed header : [x | 0 | 0 | 0 | 2]
 	x depends on the QoS level : 
-		0  NONE
-		1  PUBACK
-		2  PUBREC
+		4  PUBACK
+		5  PUBREC
+		6  PUBREL
+		7  PUBCOMP	
 5 subscribe:
 	[fixed header | message id(2 bytes) | clientid(23 byte) (| topic name) * ]
 	fixed header : [8 | 0 | 0 | 1 | remaining length ]

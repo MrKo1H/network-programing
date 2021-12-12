@@ -8,8 +8,7 @@ import java.util.Scanner;
 public class Subscriber {
     public  static int          BUFFER_SIZE = 1024;
     private static int          messageID = 0;
-    private static final String clientID = "abcdjfu";
-
+    private String              clientID ;
     private Socket              connFdListen;
     private Socket              connFdSub;
     private InputStream         in;
@@ -17,7 +16,8 @@ public class Subscriber {
     private String              serverAddress;
     private int                 serverPort;
 
-    public Subscriber(){
+    public Subscriber(String clientID){
+        this.clientID = clientID;
         this.serverAddress = "localhost";
         this.serverPort    = 1608;
     }
@@ -30,7 +30,7 @@ public class Subscriber {
         return serverAddress;
     }
 
-    public static String getClientID() {
+    public String getClientID() {
         return clientID;
     }
 
@@ -109,7 +109,9 @@ public class Subscriber {
     }
 
     public static void main(String[] argv){
-        Subscriber subscriber = new Subscriber();
+        String clienID;
+        clienID = (argv.length == 1) ? argv[0] : "default";
+        Subscriber subscriber = new Subscriber(clienID);
         subscriber.start();
     }
 
@@ -143,7 +145,7 @@ public class Subscriber {
                 System.out.println("Sent CONNECT");
 
                 while(true){
-                    if( (n_read = in.read(recvBuff, 0, recvBuff.length)) != -1){
+                   if( (n_read = in.read(recvBuff, 0, recvBuff.length)) != -1){
                         n_write = 0;
                         switch (PacketMessage.getMessageType(recvBuff)){
                             case 0: // nothing

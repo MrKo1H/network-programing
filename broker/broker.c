@@ -5,8 +5,6 @@ struct sub subscriber[SUBSCRIBER_MAX];
 int cnt_sub = 0; // number of subscriber
 
 
-pthread_mutex_t sub_connect_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t sub_subscribe_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_mutex_t pub_recv_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  pub_recv_cond = PTHREAD_COND_INITIALIZER;
@@ -47,6 +45,7 @@ static void *handler(void *arg){
 	char recv_buff[BUFFER_SIZE], sent_buff[BUFFER_SIZE];
 	int n_read, n_write;
 	struct sub *usr;
+	int msgtype;
 
 	connfd = *((int *)arg);
 	free(arg);
@@ -57,31 +56,35 @@ static void *handler(void *arg){
 
 	switch(get_msg_type(recv_buff[0])){
 		case 1: // received connect
-			puts("received connect");
+			puts("[-] received connect");
 			viewConnect(recv_buff);
-			
-			puts("sent connack");
+			puts("[-] sent connack");
 			n_write = makeConnack(sent_buff, ACCECPT);
 			write(connfd, sent_buff, n_write);
-			
-			Pthread_mutex_lock(&sub_connect_mutex);
-			
+			Pthread_mutex_lock(&pub_recv_mutex);
 			recvConnect(recv_buff, &subscriber[cnt_sub]);
-			++cnt_sub;
-
-			Pthread_mutex_unlock(&sub_connect_mutex);
-
+			usr = &subscriber[cnt_sub++];
+			Pthread_mutex_unlock(&pub_recv_mutex);
 			while(1){
 				Pthread_mutex_lock(&pub_recv_mutex);
-
 				Pthread_cond_wait(&pub_recv_cond,&pub_recv_mutex);
-				++pub_com;
-				
+				if( checkSubscribe(usr, &pub_recv)){
+					Pthread_cond_signal(&pub_sent_cond);
+					Pthread_mutex_unlock(&pub_recv_mutex);
+					break;
+				}
 				n_write = makePublish(sent_buff, &pub_recv);
-				write(connfd, sent_buff, n_write);
-
+				msgtype = -1;
+				while(msgtype != 4){ /// puback
+					write(connfd, sent_buff, n_write);
+					if( (n_read = read(connfd, recv_buff, BUFFER_SIZE)) == 0){
+						Pthread_cond_signal(&pub_sent_cond);
+						Pthread_mutex_unlock(&pub_recv_mutex);
+						return NULL;
+					};
+					msgtype = recvPuback(recv_buff);
+				}
 				Pthread_cond_signal(&pub_sent_cond);
-
 				Pthread_mutex_unlock(&pub_recv_mutex);
 
 			}			
@@ -89,29 +92,21 @@ static void *handler(void *arg){
 		case 2: 
 			break;
 		case 3: // received publish
-			puts("received publish ");
+			puts("[-] received publish ");
 			viewPublish(recv_buff);
-
 			Pthread_mutex_lock(&pub_recv_mutex);
-
 			recvPublish(recv_buff, &pub_recv);
-
-			Pthread_cond_signal(&pub_recv_cond);
-
-			while(pub_com < cnt_sub)
-				Pthread_cond_wait(&pub_sent_cond, &pub_recv_mutex);
-
+			n_write = makePuback(sent_buff, 0);
+			write(connfd, sent_buff, n_write);
+			Pthread_cond_broadcast(&pub_recv_cond);
 			Pthread_mutex_unlock(&pub_recv_mutex);
 			break;
 		case 8: // subscribe
-			puts("received subscribe"); 
+			puts("[-] received subscribe"); 
 			viewSubscribe(recv_buff);
-
-			Pthread_mutex_lock(&sub_subscribe_mutex);
-			
+			Pthread_mutex_lock(&pub_recv_mutex);
 			recvSubscribe(recv_buff, subscriber, cnt_sub);
-
-			Pthread_mutex_unlock(&sub_subscribe_mutex);
+			Pthread_mutex_unlock(&pub_recv_mutex);
 			break;
 	}
 	return NULL;

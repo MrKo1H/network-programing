@@ -154,13 +154,13 @@ public class Subscriber {
                                 break;
                             case 2: // connack
                                 System.out.println("Received CONNACK");
-                                System.out.println("MessageID   :" + PacketMessage.getMessageId(recvBuff, PacketMessage.FIXED_HEADER_SIZE));
+                               // System.out.println("MessageID   :" + PacketMessage.getMessageId(recvBuff, PacketMessage.FIXED_HEADER_SIZE));
                                 System.out.println("Return code :" + PacketMessage.recvConnack(recvBuff));
                                 break;
                             case 3: // publish
                                 String[] msg = PacketMessage.recvPublish(recvBuff, n_read);
                                 System.out.println("Received PUBLISH");
-                                System.out.println("MessageID:" + msg[0]);
+                             //   System.out.println("MessageID:" + msg[0]);
                                 System.out.println("Topic name:" + msg[1]);
                                 System.out.println("Payload:" + msg[2]);
 

@@ -69,22 +69,19 @@ static void *handler(void *arg){
 				Pthread_mutex_lock(&pub_recv_mutex);
 				Pthread_cond_wait(&pub_recv_cond,&pub_recv_mutex);
 				if( checkSubscribe(usr, &pub_recv)){
-					Pthread_cond_signal(&pub_sent_cond);
 					Pthread_mutex_unlock(&pub_recv_mutex);
-					break;
+					continue;
 				}
 				n_write = makePublish(sent_buff, &pub_recv);
 				msgtype = -1;
 				while(msgtype != 4){ /// puback
 					write(connfd, sent_buff, n_write);
 					if( (n_read = read(connfd, recv_buff, BUFFER_SIZE)) == 0){
-						Pthread_cond_signal(&pub_sent_cond);
 						Pthread_mutex_unlock(&pub_recv_mutex);
 						return NULL;
 					};
 					msgtype = recvPuback(recv_buff);
 				}
-				Pthread_cond_signal(&pub_sent_cond);
 				Pthread_mutex_unlock(&pub_recv_mutex);
 
 			}			
@@ -95,7 +92,7 @@ static void *handler(void *arg){
 			puts("[-] received publish ");
 			viewPublish(recv_buff);
 			Pthread_mutex_lock(&pub_recv_mutex);
-			recvPublish(recv_buff, &pub_recv);
+			recvPublish(recv_buff, &pub_recv);	
 			n_write = makePuback(sent_buff, 0);
 			write(connfd, sent_buff, n_write);
 			Pthread_cond_broadcast(&pub_recv_cond);

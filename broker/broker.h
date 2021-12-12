@@ -60,6 +60,7 @@ struct sub{ /// subscriber
 	char *s_password;
 	int s_cnt; // number of topic subscribed
 	topic *s_top[SUBSCRIBE_MAX];
+	int  msgID;
 };
 struct pub{
 	topic *p_top;
@@ -107,9 +108,6 @@ char * getClientID(char *pkt, int idx){
 
 void viewFixedHeader(char *pkt){
 	printf("Message Type:%d\n", get_msg_type(pkt[0]));
-	printf("DUP Flag:%d\n", get_dup_flag(pkt[0]));
-	printf("QoS level:%d\n", get_qos_level(pkt[0]));
-	printf("Retain:%d\n", get_retain(pkt[0]));
 	printf("Remaing Length:%d\n", getRemainingLen(pkt));
 }
 char *getUsername(char *pkt, int idx){
@@ -147,7 +145,7 @@ void recvConnect(char *pkt, struct sub *x){
 
 void viewConnect(char *pkt){
 	 viewFixedHeader(pkt);	
-	 printf("user name flag:%d password flag: %d will retain: %d will QoS: %d will flag: %d clean session: %d\n", get_usr_flag(pkt[0]), get_pass_flag(pkt[0]), get_will_retain(pkt[0]), get_will_qos(pkt[0]), get_will_flag(pkt[0]), get_clean_session(pkt[0]));
+	 printf("user name flag:%d password flag: %d\n", get_usr_flag(pkt[0]), get_pass_flag(pkt[0]));
 	 printf("Client ID: %s\n", getClientID(pkt, FIXED_HEADER_SIZE + CONNECT_FLAG_SIZE));
 }
 

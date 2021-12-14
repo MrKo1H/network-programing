@@ -1,15 +1,17 @@
 import java.io.*;
 import java.net.*;
+import java.util.Random;
 import java.util.Scanner;
 
 public class Sensor {
-
+    public static final String[] locations = new String[]{"HA NOI", "BAC NINH", "HAI PHONG", "HO CHI MINH", "QUANG NINH", "QUANG BINH", "THUA THIEN HUE", "BAC GIANG", "TAY NGUYEN", "CAN THO"};
     public static final int BUFFER_SIZE                 = 1024;
     public static final int FIXED_HEADER_SIZE           = 5;
     public static final int REMAINING_LENGTH_SIZE       = 4;
     public static final int TOPIC_NAME_LENGTH_SIZE      = 2;
     public static final int MESSAGE_ID_SIZE             = 2;
     public static final int PAYLOAD_LENGTH_SIZE         = 2;
+    public static final int TIME_DELAY                  = 1000;
 
     public static int       messageID = 0;
     private Socket          connFd;
@@ -40,8 +42,8 @@ public class Sensor {
             remainingLength >>= 8;
         }
     }
-    private void setFixedHeader(byte[] pkt, int msgType, int dupFlag, int qosLevel, int retain,int remainingLength){
-        pkt[0] = (byte)(msgType << 4 | dupFlag << 3 | qosLevel << 1 | retain);
+    private void setFixedHeader(byte[] pkt, int msgType,int remainingLength){
+        pkt[0] = (byte)(msgType << 4);
         setRemainingLength(pkt, remainingLength);
     }
 
@@ -95,7 +97,7 @@ public class Sensor {
         idx = setMessageID(pkt, idx);
         idx = setTopic(pkt, idx, location);
         idx = setPayload(pkt, idx, payload);
-        setFixedHeader(pkt, 3, 0, 1, 0, idx - FIXED_HEADER_SIZE);
+        setFixedHeader(pkt, 3, idx - FIXED_HEADER_SIZE);
         return idx;
     }
 
@@ -112,45 +114,49 @@ public class Sensor {
 
     public void start(){
         while(true){
-            try{
-                this.connFd = new Socket(this.brokerAddress, this.brokerPort);
-                this.in = connFd.getInputStream();
-                this.out = connFd.getOutputStream();
+            try {
+                Random x = new Random();
+                String location = locations[x.nextInt(locations.length)];
+                int temperature = 20 + x.nextInt(70);
+                String payload = "" + temperature + "%";
+                try {
+                    this.connFd = new Socket(this.brokerAddress, this.brokerPort);
+                    this.in = connFd.getInputStream();
+                    this.out = connFd.getOutputStream();
 
-                byte[] sentBuff = new byte[BUFFER_SIZE];
-                byte[] recvBuff = new byte[BUFFER_SIZE];
-                int n_read, n_write;
-                System.out.println("Connected to server " + connFd);
+                    byte[] sentBuff = new byte[BUFFER_SIZE];
+                    byte[] recvBuff = new byte[BUFFER_SIZE];
+                    int n_read, n_write;
+                    System.out.println("Connected to server " + connFd);
 
-                /** make publish msg sent to broker
-                 for test
-                 */
-                Scanner scanner = new Scanner(System.in);
-                String location, payload;
+                    /** make publish msg sent to broker
+                     for test
+                     */
+                    Scanner scanner = new Scanner(System.in);
+                    n_write = makePublish(sentBuff, location, payload);
+                    out.write(sentBuff, 0, n_write);
 
-                System.out.print("location: ");
-                location = scanner.nextLine();
-                System.out.print("payload: ");
-                payload = scanner.nextLine();
-                n_write = makePublish(sentBuff, location, payload);
-                out.write(sentBuff, 0, n_write);
+                    if ((n_read = in.read(recvBuff)) != -1) {
+                        messageID = getMessageID(recvBuff, FIXED_HEADER_SIZE);
+                    }
+                } catch (SocketException ex) {
 
-                if( (n_read = in.read(recvBuff)) != -1){
-                    messageID = getMessageID(recvBuff, FIXED_HEADER_SIZE);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            } catch(SocketException ex){
-
-            } catch (UnknownHostException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+                Thread.sleep(TIME_DELAY);
+            }catch (InterruptedException ex){
+                System.out.println(ex.fillInStackTrace());
             }
         }
     }
 
     public static void main(String[] argv){
         String sensorName;
-        sensorName = (argv.length == 1) ? argv[0] : "aaaa";
+        String location, payload;
+        sensorName = "humidity";
         Sensor sensor = new Sensor(sensorName);
         sensor.start();
     }

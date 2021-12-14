@@ -46,6 +46,7 @@ static void *handler(void *arg){
 	int n_read, n_write;
 	struct sub *usr;
 	int msgtype;
+	int recode;
 
 	connfd = *((int *)arg);
 	free(arg);
@@ -64,6 +65,7 @@ static void *handler(void *arg){
 			Pthread_mutex_lock(&pub_recv_mutex);
 			recvConnect(recv_buff, &subscriber[cnt_sub]);
 			usr = &subscriber[cnt_sub++];
+			usr->msgID++;
 			Pthread_mutex_unlock(&pub_recv_mutex);
 			while(1){
 				Pthread_mutex_lock(&pub_recv_mutex);
@@ -72,7 +74,7 @@ static void *handler(void *arg){
 					Pthread_mutex_unlock(&pub_recv_mutex);
 					continue;
 				}
-				n_write = makePublish(sent_buff, &pub_recv);
+				n_write = makePublish(sent_buff, &pub_recv, usr->msgID++);
 				msgtype = -1;
 				while(msgtype != 4){ /// puback
 					write(connfd, sent_buff, n_write);
@@ -81,12 +83,11 @@ static void *handler(void *arg){
 						return NULL;
 					};
 					msgtype = recvPuback(recv_buff);
+					usr->msgID++;
 				}
 				Pthread_mutex_unlock(&pub_recv_mutex);
 
 			}			
-			break;
-		case 2: 
 			break;
 		case 3: // received publish
 			puts("[-] received publish ");
@@ -98,12 +99,22 @@ static void *handler(void *arg){
 			Pthread_cond_broadcast(&pub_recv_cond);
 			Pthread_mutex_unlock(&pub_recv_mutex);
 			break;
+		case 5: // received unsub
+			puts("[-] received unsubscribe");
+			Pthread_mutex_lock(&pub_recv_mutex);
+			recode = recvUnsubscribe(recv_buff, subscriber, cnt_sub);
+			Pthread_mutex_unlock(&pub_recv_mutex);
+			n_write = makeUnsuback(sent_buff, recode);
+			write(connfd, sent_buff, n_write);
+			break;
 		case 8: // subscribe
 			puts("[-] received subscribe"); 
 			viewSubscribe(recv_buff);
 			Pthread_mutex_lock(&pub_recv_mutex);
 			recvSubscribe(recv_buff, subscriber, cnt_sub);
 			Pthread_mutex_unlock(&pub_recv_mutex);
+			n_write = makeSuback(sent_buff);
+			write(connfd, sent_buff, n_write);
 			break;
 	}
 	return NULL;

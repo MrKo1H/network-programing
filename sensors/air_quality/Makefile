@@ -1,0 +1,1 @@
+javac Sensor.java && java Sensor

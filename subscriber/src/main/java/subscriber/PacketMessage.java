@@ -18,8 +18,8 @@ public class PacketMessage {
             length >>= 8;
         }
     }
-    public static void setFixedHeader(byte[]pkt, int msgType, int dupFlag, int qosLevel, int retain, int remainingLength){
-        pkt[0] = (byte)(msgType << 4 | dupFlag << 3 | qosLevel << 1 | retain);
+    public static void setFixedHeader(byte[]pkt, int msgType, int remainingLength){
+        pkt[0] = (byte)(msgType << 4);
         setRemainingLength(pkt, remainingLength);
     }
 
@@ -126,7 +126,7 @@ public class PacketMessage {
         int idx = FIXED_HEADER_SIZE;
         idx = setConnectFlag(pkt, idx, 0,0,0,0,0,0);
         idx = setClientID(pkt, idx, clientID);
-        setFixedHeader(pkt, 1, 0, 0, 0, idx - FIXED_HEADER_SIZE);
+        setFixedHeader(pkt, 1, idx - FIXED_HEADER_SIZE);
         return idx;
     }
 
@@ -163,26 +163,11 @@ public class PacketMessage {
     public static int makePuback(byte[] pkt, int messageID){
         int idx = FIXED_HEADER_SIZE;
         idx = setMessageId(pkt, idx, messageID);
-        setFixedHeader(pkt, 4, 0, 1, 0, idx - FIXED_HEADER_SIZE);
+        setFixedHeader(pkt, 4, idx - FIXED_HEADER_SIZE);
         return idx;
     }
 
-    /** pubrec response to server ( qos of packet connect = 2)
-     * */
-    public static int makePubrec(byte[] pkt, int messageID){
-        int idx = FIXED_HEADER_SIZE;
-        idx = setMessageId(pkt, idx, messageID);
-        setFixedHeader(pkt, 5, 0, 2, 0 , idx - FIXED_HEADER_SIZE);
-        return idx;
-    }
-    /** pubcomp response of pubrel packet which received from server
-     * */
-    public static int makePubcomp(byte[] pkt, int messageID){
-        int idx = FIXED_HEADER_SIZE;
-        idx = setMessageId(pkt, idx, messageID);
-        setFixedHeader(pkt, 7, 0, 0, 0, idx - FIXED_HEADER_SIZE);
-        return idx;
-    }
+
     /** subscribe pkt sent to server
      * */
     public static int makeSubscribe(byte[] pkt , int messageID,String clientID, String[] topics, int len){
@@ -191,7 +176,16 @@ public class PacketMessage {
         idx = setClientID(pkt, idx, clientID);
         for( int i = 0; i < len; i++)
             idx = setTopic(pkt, idx, topics[i]);
-        setFixedHeader(pkt, 8, 0, 0, 1, idx - FIXED_HEADER_SIZE);
+        setFixedHeader(pkt, 8,idx - FIXED_HEADER_SIZE);
+        return idx;
+    }
+    public static int makeUnsubscribe(byte[] pkt , int messageID,String clientID, String[] topics, int len){
+        int idx = FIXED_HEADER_SIZE;
+        idx = setMessageId(pkt, idx, messageID);
+        idx = setClientID(pkt, idx, clientID);
+        for( int i = 0; i < len; i++)
+            idx = setTopic(pkt, idx, topics[i]);
+        setFixedHeader(pkt, 5,idx - FIXED_HEADER_SIZE);
         return idx;
     }
 

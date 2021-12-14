@@ -33,21 +33,11 @@
 
 
 #define set_msg_type(x)  (x) << 4 
-#define set_dup_flag(x)  (x) << 3
-#define set_qos_level(x) (x) << 1
-#define set_retain(x) 	 (x) 
 
 #define get_msg_type(x)  (x) >> 4 &0b1111
-#define get_dup_flag(x)  (x) >> 3 &0b1
-#define get_qos_level(x) (x) >> 1 &0b11
-#define	get_retain(x)	 (x) & 0b1
 
 #define get_usr_flag(x)  (x) >> 7
 #define get_pass_flag(x) (x) >> 6 &0b1
-#define get_will_retain(x) (x) >> 5 &0b1
-#define get_will_qos(x)   (x) >> 3 &0b11
-#define get_will_flag(x)  (x) >> 2 &0b1 
-#define get_clean_session(x) (x) >> 1 & 0b1
 
 typedef struct _topic{
 	char t_loc[LOCATION_LEN];  //location
@@ -84,8 +74,8 @@ int getRemainingLen(char *pkt){
 	return *((int32_t *)(pkt + 1));
 }
 
-void setFixedHeader(char *pkt, int msgType, int dupFlag, int qosLevel, int retain, int remainLen){
-	pkt[0] = set_msg_type(msgType) | set_dup_flag(dupFlag) | set_qos_level(qosLevel) | set_retain(retain);
+void setFixedHeader(char *pkt, int msgType, int remainLen){
+	pkt[0] = set_msg_type(msgType);
 	setRemainingLen(pkt, remainLen);
 }
 
@@ -110,6 +100,7 @@ void viewFixedHeader(char *pkt){
 	printf("Message Type:%d\n", get_msg_type(pkt[0]));
 	printf("Remaing Length:%d\n", getRemainingLen(pkt));
 }
+
 char *getUsername(char *pkt, int idx){
 	char *ptr;
 	ptr = malloc(USERNAME_SIZE);
@@ -153,7 +144,7 @@ void viewConnect(char *pkt){
 int makeConnack(char *pkt, int code){
 	int idx = FIXED_HEADER_SIZE;
 	pkt[idx++] = code;
-	setFixedHeader(pkt, 2, 0, 0, 0, idx - FIXED_HEADER_SIZE);
+	setFixedHeader(pkt, 2, idx - FIXED_HEADER_SIZE);
 	return idx;
 }
 
@@ -249,14 +240,14 @@ int setPayload(char *pkt, int idx, char *payload){
 	return idx;
 }
 
-int makePublish(char *pkt, struct pub * pub_pkt){
+int makePublish(char *pkt, struct pub * pub_pkt, int msgID){
 	int idx;	
 
 	idx = FIXED_HEADER_SIZE;	
-	idx = setMsgID(pkt, idx, 0);
+	idx = setMsgID(pkt, idx, msgID);
 	idx = setTopic(pkt, idx, pub_pkt->p_top);
 	idx = setPayload(pkt, idx, pub_pkt->p_payload);
-	setFixedHeader(pkt, 3, 0, 1, 0, idx - FIXED_HEADER_SIZE); 
+	setFixedHeader(pkt, 3, idx - FIXED_HEADER_SIZE); 
 	return idx;
 }
 
@@ -276,27 +267,13 @@ void viewPublish(char *pkt){
 int makePuback(char *pkt, int msgID){
 	int idx = FIXED_HEADER_SIZE;
 	idx = setMsgID(pkt, idx, msgID);
-	setFixedHeader(pkt, 4, 0, 1, 0, idx - FIXED_HEADER_SIZE);
+	setFixedHeader(pkt, 4, idx - FIXED_HEADER_SIZE);
 	return idx;	
 }
 
 int recvPuback(char *pkt){
 	int idx = FIXED_HEADER_SIZE;
 	return get_msg_type(pkt[0]);
-}
-
-int makePubrec(char *pkt, int msgID){
-	int idx = FIXED_HEADER_SIZE;
-	idx = setMsgID(pkt, idx, msgID);
-	setFixedHeader(pkt, 5, 0, 2, 0, idx - FIXED_HEADER_SIZE);
-	return idx;
-}
-
-int makePubrel(char *pkt, int msgID){
-	int idx = FIXED_HEADER_SIZE;
-	idx = setMsgID(pkt, idx, msgID);
-	setFixedHeader(pkt, 7, 0, 0, 0, idx - FIXED_HEADER_SIZE);
-	return idx;
 }
 
 
@@ -321,6 +298,7 @@ void recvSubscribe(char *pkt, struct sub *a, int len){
 	relen -= CLIENT_ID_SIZE;
 	for(int i = 0; i < len; i++)
 		if( strcmp(a[i].s_cli_id, id) == 0){
+				a[i].msgID++;
 				while(relen){
 					toplen = getTopicLen(pkt,idx);
 					x = getTopic(pkt, idx);
@@ -332,6 +310,35 @@ void recvSubscribe(char *pkt, struct sub *a, int len){
 				}
 				break;
 		}
+}
+
+int recvUnsubscribe(char *pkt, struct sub *a, int len){	
+	char *id;
+	int idx;
+	topic *x;
+	int relen, toplen;
+	int pos;
+ 
+	idx = FIXED_HEADER_SIZE + MESSAGE_ID_SIZE;
+	relen = getRemainingLen(pkt) - MESSAGE_ID_SIZE;
+	id = getClientID(pkt, idx);
+	idx += CLIENT_ID_SIZE;
+	relen -= CLIENT_ID_SIZE;
+	for(int i = 0; i < len; i++)
+		if( strcmp(a[i].s_cli_id, id) == 0){
+				a[i].msgID++;
+				toplen = getTopicLen(pkt,idx);
+				x = getTopic(pkt, idx);
+				for(int j = 0; j < a[i].s_cnt; j++)
+					if( !strcmp(a[i].s_top[j]->t_loc, x->t_loc)&&
+						!strcmp(a[i].s_top[j]->t_ser, x->t_ser)){
+						a[i].s_top[j] = a[i].s_top[--a[i].s_cnt];
+						return 0;
+					}
+
+				break;
+		}
+	return 1;
 }
 
 void viewSubscribe(char *pkt){
@@ -361,7 +368,20 @@ void viewSubscribe(char *pkt){
 }
 
 int makeSuback(char *pkt){
+	int idx;
 
+	idx = FIXED_HEADER_SIZE;
+	setFixedHeader(pkt, 9, idx - FIXED_HEADER_SIZE);
+	return idx;
+}
+
+int makeUnsuback(char *pkt,int recode){
+	int idx;
+
+	idx = FIXED_HEADER_SIZE;
+	pkt[idx++] = recode;
+	setFixedHeader(pkt, 6, idx - FIXED_HEADER_SIZE);
+	return idx;
 }
 
 int passiveTCP(){

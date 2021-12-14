@@ -1,14 +1,14 @@
 package subscriber;
 
+import java.awt.event.*;
 import java.io.*;
 import java.net.*;
-import java.time.chrono.IsoChronology;
 import java.util.Scanner;
 
-public class Subscriber {
+public class Subscriber{
     public  static int          BUFFER_SIZE = 1024;
     private static int          messageID = 0;
-    private String              clientID ;
+    private static String       clientID ;
     private Socket              connFdListen;
     private Socket              connFdSub;
     private InputStream         in;
@@ -36,7 +36,7 @@ public class Subscriber {
 
     public void subscribe(){
 
-        String location;
+	String location = "BAC NINH";
         String sensor;
         String[] topics= new String[BUFFER_SIZE];
         int len = 0;
@@ -47,16 +47,12 @@ public class Subscriber {
             sensor = inputUser.nextLine();
             if( sensor.equals("@"))
                 break;
-            System.out.print("Subscribe to location: ");
-            location = inputUser.nextLine();
-            if( sensor.equals("@"))
-                break;
             topics[len++] = PacketMessage.makeTopic(location, sensor);
         }
         try{
             this.connFdSub = new Socket(getServerAddress(), getServerPort());
             System.out.println("Connectd to server :" + this.connFdSub);
-            
+
             InputStream in = connFdSub.getInputStream();
             OutputStream out  = connFdSub.getOutputStream();
             byte[] buff = new byte[BUFFER_SIZE];
@@ -79,15 +75,86 @@ public class Subscriber {
         }
     }
 
-    public void start(){
-        try{
-            this.connFdListen = new Socket(getServerAddress(), getServerPort());
-            ListenThread listenThread= new ListenThread(connFdListen);
-            listenThread.start();
-            System.out.println("Connected to server " + connFdListen);
+    public void unSubscribe(){
+        String location = "BAC NINH";
+        String sensor;
+        String[] topics= new String[BUFFER_SIZE];
+        int len = 0;
+        System.out.println("Press @ for subscribe");
+        Scanner inputUser =  new Scanner(System.in);
+        System.out.print("Unsubscribe to topic :");
+        sensor = inputUser.nextLine();
+        if( sensor.equals("@"))
+            return;
+        topics[len++] = PacketMessage.makeTopic(location, sensor);
+        try {
+            this.connFdSub = new Socket(getServerAddress(), getServerPort());
+            System.out.println("Connectd to server :" + this.connFdSub);
 
-            while(true){
-                subscribe();
+            InputStream in = connFdSub.getInputStream();
+            OutputStream out = connFdSub.getOutputStream();
+            byte[] buff = new byte[BUFFER_SIZE];
+            int bytes;
+
+            bytes = PacketMessage.makeUnsubscribe(buff, getMessageID(), getClientID(), topics, len);
+            out.write(buff, 0, bytes);
+            incMessageID();
+
+            System.out.println("Sent UNSUBSCRIBE");
+
+            if ((bytes = in.read(buff)) != -1) {
+                System.out.println("Received UNSUBACK");
+                switch (buff[3]) {
+                    case 1:
+                        System.out.println("Unsubscribe fail");
+                        break;
+                    case 0:
+                        System.out.println("Unsubscribe success");
+                        break;
+                }
+
+            }
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void quit(){
+
+    }
+
+    public void menu(){
+        Scanner scanner = new Scanner(System.in);
+        while(true){
+            System.out.println("1.Subscribe\n2.Unsubscribe\n3.Disconnect");
+            int cmd = scanner.nextInt();
+            switch (cmd){
+                case 1:
+                    subscribe();
+                    break;
+                case 2:
+                    unSubscribe();
+                    break;
+                case 3:
+                    quit();
+                    break;
+                default:
+                    System.out.println("Invalid");
+            }
+        }
+    }
+
+    public void start(int x){
+        try{
+            if( x == 1){
+                menu();
+            } else {
+                this.connFdListen = new Socket(getServerAddress(), getServerPort());
+                ListenThread listenThread = new ListenThread(connFdListen);
+                listenThread.start();
+                System.out.println("Connected to server " + connFdListen);
             }
         } catch (SocketException ex){
 
@@ -96,12 +163,12 @@ public class Subscriber {
         }
     }
 
-    public synchronized int getMessageID() {
+    public static synchronized int getMessageID() {
         return messageID;
     }
 
-    public synchronized void setMessageID(int messageID){
-        this.messageID = messageID;
+    public static synchronized void setMessageID(int messageID){
+        Subscriber.messageID = messageID;
     }
 
     public synchronized void incMessageID(){
@@ -110,11 +177,10 @@ public class Subscriber {
 
     public static void main(String[] argv){
         String clienID;
-        clienID = (argv.length == 1) ? argv[0] : "default";
+        clienID = "cptaaaa";
         Subscriber subscriber = new Subscriber(clienID);
-        subscriber.start();
+        subscriber.start(Integer.parseInt(argv[0]));
     }
-
 
 
     class ListenThread extends Thread{
@@ -154,30 +220,17 @@ public class Subscriber {
                                 break;
                             case 2: // connack
                                 System.out.println("Received CONNACK");
-                               // System.out.println("MessageID   :" + PacketMessage.getMessageId(recvBuff, PacketMessage.FIXED_HEADER_SIZE));
                                 System.out.println("Return code :" + PacketMessage.recvConnack(recvBuff));
                                 break;
                             case 3: // publish
                                 String[] msg = PacketMessage.recvPublish(recvBuff, n_read);
                                 System.out.println("Received PUBLISH");
-                             //   System.out.println("MessageID:" + msg[0]);
+                                System.out.println("MessageID:" + msg[0]);
                                 System.out.println("Topic name:" + msg[1]);
                                 System.out.println("Payload:" + msg[2]);
 
                                 n_write = PacketMessage.makePuback(sentBuff, getMessageID());
                                 incMessageID();
-                                break;
-                            case 4: // puback
-                                break;
-                            case 5: // pubrec
-                                break;
-                            case 6: // pubrel
-                                break;
-                            case 7: // pubcomp
-                                break;
-                            case 8: // subcribe
-                                break;
-                            case 9: // suback
                                 break;
                         }
                         if( n_write > 0)

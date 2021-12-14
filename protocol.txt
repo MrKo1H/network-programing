@@ -10,13 +10,13 @@ message type :
 	+ 8 SUBSCRIBE
 	+ 9 SUBACK
 1. connect: 
-	[fixed header | connect flags | keep alive timer (2 bytes)| payload]
-	fixed header : [ 1 << 4| 0 << 3| 0 << 1| 0 | remaining length(8 * 4) ] 
-	connect flags (1 byte) : user name flag(1) | password flag(1) | 0 | 00 | 0 | 0 | 0
+	[fixed header | connect flags | payload]
+	fixed header : [ 1 | remaining length(8 * 4) ] 
+	connect flags (1 byte) : user name flag(1) | password flag(1) | 000000
 	payload : clientid ( 23 byte) (| user name(12bytes) | password(12bytes))
 2. connack:
 	[fixed header | return code(1 byte)]
-	fixed header :[2  | 0 | 0 | 0 | remaininig length(8 * 4)]
+	fixed header :[2  | 000 | remaininig length(8 * 4)]
 	return code: 0x0 connection accecpt 
 		     0x1 connection refused : unacceptable 
 		     0x2 connection refused : identifier rejected
@@ -25,19 +25,25 @@ message type :
 		     0x5 connection refused : not authorized
 3 publish:
 	[fixed header | message id(2 bytes) |topic name | payload]
-	fixed header : [3 | 0 | 0 | 0| remaining length]
+	fixed header : [3 | 000 remaining length]
 	topic name : [ length ( 2 bytes ) | topic name ]
 	payload : contains data for publishing . ( remaining length - 2 - length - 2 bytes)
-4 respond of publish ( PUBACK ):
+4 puback:
 	[fixed header | message id ( 2 bytes)]
-	fixed header : [4 | 0 | 0 | 0 | 2]
-5 subscribe:
-	[fixed header | message id(2 bytes) | clientid(23 byte) (| topic name) * ]
+	fixed header : [4 |000|2]
+5 unsubscribe:
+	[fixed header | message id (2 bytes) | client id (23byte) (| topic name )]
+	topic name : [ length(2byte) | topic name ] "/location/service"
+6 unsuback:
+	[fixed header | message id (2 byte) | return code (1byte)]
+	return code (1byte): 0 accepted
+				  1 invalid 
+7 subscribe:
+	[fixed header | message id(2 bytes) | clientid(23 byte) (| topic name)*]
 	fixed header : [8 | 0 | 0 | 0 | remaining length ]
 	topic name : [ length ( 2 bytes ) | topic name ] "/location/service"
-6 suback 
+8 suback 
 	[fixed header | message id (2 bytes)(| payload)*]
 	fixed header : [9 | 0 | 0 | 0 | remaining length ]
-	payload( 1 bytes ) : granted QoS 
 
 
